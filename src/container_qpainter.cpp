@@ -29,9 +29,11 @@ const int kDragDistance = 5;
 using Font = QFont;
 using Context = QPainter;
 
-namespace {
+#ifdef Q_STATIC_LOGGING_CATEGORY
+Q_STATIC_LOGGING_CATEGORY(log, "qlitehtml", QtCriticalMsg)
+#else
 static Q_LOGGING_CATEGORY(log, "qlitehtml", QtCriticalMsg)
-}
+#endif
 
 static QFont toQFont(litehtml::uint_ptr hFont)
 {
