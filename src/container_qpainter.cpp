@@ -685,13 +685,18 @@ void DocumentContainerPrivate::draw_background(litehtml::uint_ptr hdc,
                                                const std::vector<litehtml::background_paint> &bgs)
 {
     auto painter = toQPainter(hdc);
+    const QRegion initialClipRegion = painter->clipRegion();
+    const Qt::ClipOperation initialClipOperation
+        = initialClipRegion.isEmpty() ? Qt::ReplaceClip : Qt::IntersectClip;
     painter->save();
     for (const litehtml::background_paint &bg : bgs) {
         if (bg.is_root) {
             // TODO ?
             break;
         }
-        painter->setClipRect(toQRect(bg.clip_box));
+        if (!initialClipRegion.isEmpty())
+            painter->setClipRegion(initialClipRegion);
+        painter->setClipRect(toQRect(bg.clip_box), initialClipOperation);
         const QRegion horizontalMiddle(QRect(bg.border_box.x,
                                              bg.border_box.y + bg.border_radius.top_left_y,
                                              bg.border_box.width,
@@ -961,6 +966,11 @@ bool DocumentContainer::hasDocument() const
 void DocumentContainer::setBaseUrl(const QString &url)
 {
     d->set_base_url(url.toUtf8().constData());
+}
+
+QString DocumentContainer::baseUrl() const
+{
+    return d->m_baseUrl;
 }
 
 void DocumentContainer::render(int width, int height)
@@ -1293,6 +1303,11 @@ void DocumentContainer::setDataCallback(const DocumentContainer::DataCallback &c
     d->m_dataCallback = callback;
 }
 
+DocumentContainer::DataCallback DocumentContainer::dataCallback() const
+{
+    return d->m_dataCallback;
+}
+
 void DocumentContainer::setCursorCallback(const DocumentContainer::CursorCallback &callback)
 {
     d->m_cursorCallback = callback;
@@ -1306,6 +1321,11 @@ void DocumentContainer::setLinkCallback(const DocumentContainer::LinkCallback &c
 void DocumentContainer::setPaletteCallback(const DocumentContainer::PaletteCallback &callback)
 {
     d->m_paletteCallback = callback;
+}
+
+DocumentContainer::PaletteCallback DocumentContainer::paletteCallback() const
+{
+    return d->m_paletteCallback;
 }
 
 void DocumentContainer::setClipboardCallback(const DocumentContainer::ClipboardCallback &callback)

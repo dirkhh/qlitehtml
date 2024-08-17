@@ -47,6 +47,7 @@ public: // outside API
     void setDocument(const QByteArray &data, DocumentContainerContext *context);
     bool hasDocument() const;
     void setBaseUrl(const QString &url);
+    QString baseUrl() const;
     void setScrollPosition(const QPoint &pos);
     void render(int width, int height);
     void draw(QPainter *painter, const QRect &clip);
@@ -87,6 +88,7 @@ public: // outside API
 
     using DataCallback = std::function<QByteArray(QUrl)>;
     void setDataCallback(const DataCallback &callback);
+    DataCallback dataCallback() const;
 
     using CursorCallback = std::function<void(QCursor)>;
     void setCursorCallback(const CursorCallback &callback);
@@ -96,6 +98,7 @@ public: // outside API
 
     using PaletteCallback = std::function<QPalette()>;
     void setPaletteCallback(const PaletteCallback &callback);
+    PaletteCallback paletteCallback() const;
 
     using ClipboardCallback = std::function<void(bool)>;
     void setClipboardCallback(const ClipboardCallback &callback);
