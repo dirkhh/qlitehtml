@@ -573,6 +573,7 @@ void QLiteHtmlWidget::print(QPrinter *printer)
     dc.setDefaultFont(d->documentContainer.defaultFont());
     dc.setPaintDevice(printer);
     dc.setBaseUrl(d->documentContainer.baseUrl());
+    dc.setMediaType(DocumentContainer::MediaType::Print);
     dc.setDocument(d->html.toUtf8(), &d->context);
 
     const QRect pageRect = printer->pageRect(QPrinter::DevicePixel).toRect();

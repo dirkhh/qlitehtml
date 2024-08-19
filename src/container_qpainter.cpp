@@ -925,8 +925,7 @@ std::shared_ptr<litehtml::element> DocumentContainerPrivate::create_element(
 
 void DocumentContainerPrivate::get_media_features(litehtml::media_features &media) const
 {
-    media.type = litehtml::media_type_screen;
-    // TODO
+    media.type = mediaType;
     qDebug(log) << "get_media_features";
 }
 
@@ -1015,6 +1014,42 @@ int DocumentContainer::anchorY(const QString &anchorName) const
         element = element->parent();
     }
     return 0;
+}
+
+static litehtml::media_type fromQt(const DocumentContainer::MediaType mt)
+{
+    using MT = DocumentContainer::MediaType;
+    switch (mt)
+    {
+    case MT::None:
+        return litehtml::media_type_none;
+    case MT::All:
+        return litehtml::media_type_all;
+    case MT::Screen:
+        return litehtml::media_type_screen;
+    case MT::Print:
+        return litehtml::media_type_print;
+    case MT::Braille:
+        return litehtml::media_type_braille;
+    case MT::Embossed:
+        return litehtml::media_type_embossed;
+    case MT::Handheld:
+        return litehtml::media_type_handheld;
+    case MT::Projection:
+        return litehtml::media_type_projection;
+    case MT::Speech:
+        return litehtml::media_type_speech;
+    case MT::TTY:
+        return litehtml::media_type_tty;
+    case MT::TV:
+        return litehtml::media_type_tv;
+    }
+    Q_UNREACHABLE();
+}
+
+void DocumentContainer::setMediaType(MediaType mt)
+{
+    d->mediaType = fromQt(mt);
 }
 
 QVector<QRect> DocumentContainer::mousePressEvent(const QPoint &documentPos,

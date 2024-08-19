@@ -55,6 +55,23 @@ public: // outside API
     int documentHeight() const;
     int anchorY(const QString &anchorName) const;
 
+    enum class MediaType
+    {
+        None,
+        All,
+        Screen,
+        Print,
+        Braille,
+        Embossed,
+        Handheld,
+        Projection,
+        Speech,
+        TTY,
+        TV
+    };
+
+    void setMediaType(MediaType t);
+
     // these return areas to redraw in document space
     QVector<QRect> mousePressEvent(const QPoint &documentPos,
                                    const QPoint &viewportPos,
