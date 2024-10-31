@@ -621,12 +621,12 @@ void DocumentContainerPrivate::drawSelection(QPainter *painter, const QRect &cli
     painter->restore();
 }
 
-static QString tagName(const litehtml::element::ptr &e)
+static bool isInBody(const litehtml::element::ptr &e)
 {
     litehtml::element::ptr current = e;
-    while (current && std::strlen(current->get_tagName()) == 0)
+    while (current && QString::fromUtf8(current->get_tagName()).toLower() != "body")
         current = current->parent();
-    return current ? QString::fromUtf8(current->get_tagName()) : QString();
+    return (bool)current;
 }
 
 void DocumentContainerPrivate::buildIndex()
@@ -641,7 +641,7 @@ void DocumentContainerPrivate::buildIndex()
     while (current != m_document->root()) {
         m_index.elementToIndex.insert({current, index});
         if (!inBody)
-            inBody = tagName(current).toLower() == "body";
+            inBody = isInBody(current);
         if (inBody && isVisible(current)) {
             std::string text;
             current->get_text(text);
