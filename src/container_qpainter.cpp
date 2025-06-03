@@ -200,8 +200,8 @@ static bool deepest_child_at_point(const litehtml::element::ptr &element,
     // Do not continue down elements that do not cover the position. Exceptions:
     // - elements with 0 size (includes anchors and other weird elements)
     // - html and body, which for some reason have size == viewport size
-    if (!placement.size().isEmpty() && element->tag() != litehtml::_html_
-        && element->tag() != litehtml::_body_ && !placement.contains(pos)) {
+    if (!placement.size().isEmpty() && element->tag() != litehtml::string_id::_html_
+        && element->tag() != litehtml::string_id::_body_ && !placement.contains(pos)) {
         return false /*continue iterating*/;
     }
     // qDebug() << qPrintable(QString(level * 2, ' ')) << element->dump_get_name() << placement << pos;
@@ -624,9 +624,9 @@ void DocumentContainerPrivate::drawSelection(QPainter *painter, const QRect &cli
 static bool isInBody(const litehtml::element::ptr &e)
 {
     litehtml::element::ptr current = e;
-    while (current && QString::fromUtf8(current->get_tagName()).toLower() != "body")
+    while (current && current->tag() != litehtml::string_id::_body_)
         current = current->parent();
-    return (bool)current;
+    return current.get() != nullptr;
 }
 
 void DocumentContainerPrivate::buildIndex()
