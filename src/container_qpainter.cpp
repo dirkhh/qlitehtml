@@ -23,6 +23,7 @@
 #include <QUrl>
 
 #include <algorithm>
+#include <queue>
 
 const int kDragDistance = 5;
 
@@ -214,6 +215,27 @@ static bool deepest_child_at_point(const litehtml::element::ptr &element,
     if (placement.contains(pos))
         return action(element);
     return false /*continue iterating*/;
+}
+
+static litehtml::element::ptr element_with_id_or_name(const litehtml::element::ptr &root,
+                                                      const std::string &id)
+{
+    std::queue<litehtml::element::ptr> pending;
+    pending.push(root);
+    while (!pending.empty()) {
+        const litehtml::element::ptr element = pending.front();
+        pending.pop();
+        if (_s(element->id()) == id)
+            return element;
+        const char *nameAttr = element->get_attr("name");
+        if (nameAttr && nameAttr == id)
+            return element;
+        const litehtml::elements_list &children = element->children();
+        for (const auto &child : children) {
+            pending.push(child);
+        }
+    }
+    return {};
 }
 
 static Selection::Element selection_element_at_point(const litehtml::element::ptr &element,
@@ -1001,11 +1023,11 @@ int DocumentContainer::documentHeight() const
 
 int DocumentContainer::anchorY(const QString &anchorName) const
 {
-    litehtml::element::ptr element = d->m_document->root()->select_one(
-        QString("#%1").arg(anchorName).toStdString());
-    if (!element) {
-        element = d->m_document->root()->select_one(QString("[name=%1]").arg(anchorName).toStdString());
-    }
+    // do manual recursive search instead of using litehtml's select_one css selector method,
+    // since we can have '.' in our IDs which has special meaning (class selector) for css selectors
+    // and litehtml doesn't support escaping them
+    litehtml::element::ptr element = element_with_id_or_name(d->m_document->root(),
+                                                             anchorName.toStdString());
     if (!element)
         return -1;
     while (element) {
