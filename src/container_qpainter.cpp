@@ -573,7 +573,7 @@ void DocumentContainerPrivate::draw_list_marker(litehtml::uint_ptr hdc,
         }
     } else {
         const QPixmap pixmap = getPixmap(QString::fromStdString(marker.image),
-                                         QString::fromStdString(marker.baseurl));
+                                         QString::fromUtf8(marker.baseurl));
         painter->drawPixmap(toQRect(marker.pos), pixmap);
     }
 }
