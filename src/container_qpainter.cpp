@@ -1028,8 +1028,15 @@ int DocumentContainer::anchorY(const QString &anchorName) const
     // and litehtml doesn't support escaping them
     litehtml::element::ptr element = element_with_id_or_name(d->m_document->root(),
                                                              anchorName.toStdString());
-    if (!element)
-        return -1;
+    if (!element) {
+        // Convert the anchor name to lowercase, as the current litehtml implementation
+        // converts all IDs to lowercase when parsing the HTML. This will change in future
+        // versions of litehtml, see https://github.com/litehtml/litehtml/pull/347)
+        const QString lowerAnchorName = anchorName.toLower();
+        element = element_with_id_or_name(d->m_document->root(), lowerAnchorName.toStdString());
+        if (!element)
+            return -1;
+    }
     while (element) {
         if (element->get_placement().y > 0)
             return element->get_placement().y;
