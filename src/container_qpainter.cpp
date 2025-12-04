@@ -48,7 +48,10 @@ static QPainter *toQPainter(litehtml::uint_ptr hdc)
 
 static QRect toQRect(litehtml::position position)
 {
-    return {position.x, position.y, position.width, position.height};
+    return {static_cast<int>(position.x),
+            static_cast<int>(position.y),
+            static_cast<int>(position.width),
+            static_cast<int>(position.height)};
 }
 
 static bool isVisible(const litehtml::element::ptr &element)
@@ -477,14 +480,12 @@ DocumentContainer::DocumentContainer()
 
 DocumentContainer::~DocumentContainer() = default;
 
-litehtml::uint_ptr DocumentContainerPrivate::create_font(const char *faceName,
-                                                         int size,
-                                                         int weight,
-                                                         litehtml::font_style italic,
-                                                         unsigned int decoration,
+litehtml::uint_ptr DocumentContainerPrivate::create_font(const litehtml::font_description& descr,
+                                                         const litehtml::document* doc,
                                                          litehtml::font_metrics *fm)
 {
-    const QStringList splitNames = QString::fromUtf8(faceName).split(',', Qt::SkipEmptyParts);
+    Q_UNUSED(doc)
+    const QStringList splitNames = QString::fromStdString(descr.family).split(',', Qt::SkipEmptyParts);
     QStringList familyNames;
     std::transform(splitNames.cbegin(),
                    splitNames.cend(),
@@ -507,15 +508,15 @@ litehtml::uint_ptr DocumentContainerPrivate::create_font(const char *faceName,
                    });
     auto font = new QFont();
     font->setFamilies(familyNames);
-    font->setPixelSize(size);
-    font->setWeight(cssWeightToQtWeight(weight));
-    font->setStyle(toQFontStyle(italic));
+    font->setPixelSize(static_cast<int>(descr.size));
+    font->setWeight(cssWeightToQtWeight(descr.weight));
+    font->setStyle(toQFontStyle(descr.style));
     font->setStyleStrategy(m_antialias ? QFont::PreferAntialias : QFont::NoAntialias);
-    if (decoration == litehtml::font_decoration_underline)
+    if (descr.decoration_line & litehtml::text_decoration_line_underline)
         font->setUnderline(true);
-    if (decoration == litehtml::font_decoration_overline)
+    if (descr.decoration_line & litehtml::text_decoration_line_overline)
         font->setOverline(true);
-    if (decoration == litehtml::font_decoration_linethrough)
+    if (descr.decoration_line & litehtml::text_decoration_line_line_through)
         font->setStrikeOut(true);
     if (fm) {
         const QFontMetrics metrics(*font);
@@ -534,10 +535,10 @@ void DocumentContainerPrivate::delete_font(litehtml::uint_ptr hFont)
     delete font;
 }
 
-int DocumentContainerPrivate::text_width(const char *text, litehtml::uint_ptr hFont)
+litehtml::pixel_t DocumentContainerPrivate::text_width(const char *text, litehtml::uint_ptr hFont)
 {
     const QFontMetrics fm(toQFont(hFont));
-    return fm.horizontalAdvance(QString::fromUtf8(text));
+    return static_cast<litehtml::pixel_t>(fm.horizontalAdvance(QString::fromUtf8(text)));
 }
 
 void DocumentContainerPrivate::draw_text(litehtml::uint_ptr hdc,
@@ -552,15 +553,15 @@ void DocumentContainerPrivate::draw_text(litehtml::uint_ptr hdc,
     painter->drawText(toQRect(pos), 0, QString::fromUtf8(text));
 }
 
-int DocumentContainerPrivate::pt_to_px(int pt) const
+litehtml::pixel_t DocumentContainerPrivate::pt_to_px(float pt) const
 {
     // magic factor of 11/12 to account for differences to webengine/webkit
-    return m_paintDevice->physicalDpiY() * pt * 11 / m_paintDevice->logicalDpiY() / 12;
+    return static_cast<litehtml::pixel_t>(m_paintDevice->physicalDpiY() * pt * 11.0 / m_paintDevice->logicalDpiY() / 12.0);
 }
 
-int DocumentContainerPrivate::get_default_font_size() const
+litehtml::pixel_t DocumentContainerPrivate::get_default_font_size() const
 {
-    return m_defaultFont.pointSize();
+    return static_cast<litehtml::pixel_t>(m_defaultFont.pointSize());
 }
 
 const char *DocumentContainerPrivate::get_default_font_name() const
@@ -894,7 +895,7 @@ void DocumentContainerPrivate::set_cursor(const char *cursor)
     m_cursorCallback(toQCursor(QString::fromUtf8(cursor)));
 }
 
-void DocumentContainerPrivate::transform_text(std::string &text, litehtml::text_transform tt)
+void DocumentContainerPrivate::transform_text(litehtml::string &text, litehtml::text_transform tt)
 {
     // TODO
     qDebug(log) << "transform_text";
@@ -902,9 +903,9 @@ void DocumentContainerPrivate::transform_text(std::string &text, litehtml::text_
     Q_UNUSED(tt)
 }
 
-void DocumentContainerPrivate::import_css(std::string &text,
-                                          const std::string &url,
-                                          std::string &baseurl)
+void DocumentContainerPrivate::import_css(litehtml::string &text,
+                                          const litehtml::string &url,
+                                          litehtml::string &baseurl)
 {
     const QUrl actualUrl = resolveUrl(QString::fromStdString(url), QString::fromStdString(baseurl));
     const QString urlString = actualUrl.toString(QUrl::None);
@@ -928,9 +929,12 @@ void DocumentContainerPrivate::del_clip()
     qDebug(log) << "del_clip";
 }
 
-void DocumentContainerPrivate::get_client_rect(litehtml::position &client) const
+void DocumentContainerPrivate::get_viewport(litehtml::position &viewport) const
 {
-    client = {m_clientRect.x(), m_clientRect.y(), m_clientRect.width(), m_clientRect.height()};
+    viewport = {static_cast<litehtml::pixel_t>(m_clientRect.x()),
+                static_cast<litehtml::pixel_t>(m_clientRect.y()),
+                static_cast<litehtml::pixel_t>(m_clientRect.width()),
+                static_cast<litehtml::pixel_t>(m_clientRect.height())};
 }
 
 std::shared_ptr<litehtml::element> DocumentContainerPrivate::create_element(
@@ -951,7 +955,7 @@ void DocumentContainerPrivate::get_media_features(litehtml::media_features &medi
     qDebug(log) << "get_media_features";
 }
 
-void DocumentContainerPrivate::get_language(std::string &language, std::string &culture) const
+void DocumentContainerPrivate::get_language(litehtml::string &language, litehtml::string &culture) const
 {
     // TODO
     qDebug(log) << "get_language";
@@ -1007,8 +1011,14 @@ void DocumentContainer::draw(QPainter *painter, const QRect &clip)
 {
     d->drawSelection(painter, clip);
     const QPoint pos = -d->m_scrollPosition;
-    const litehtml::position clipRect = {clip.x(), clip.y(), clip.width(), clip.height()};
-    d->m_document->draw(reinterpret_cast<litehtml::uint_ptr>(painter), pos.x(), pos.y(), &clipRect);
+    const litehtml::position clipRect = {static_cast<litehtml::pixel_t>(clip.x()),
+                                         static_cast<litehtml::pixel_t>(clip.y()),
+                                         static_cast<litehtml::pixel_t>(clip.width()),
+                                         static_cast<litehtml::pixel_t>(clip.height())};
+    d->m_document->draw(reinterpret_cast<litehtml::uint_ptr>(painter),
+                       static_cast<litehtml::pixel_t>(pos.x()),
+                       static_cast<litehtml::pixel_t>(pos.y()),
+                       &clipRect);
 }
 
 int DocumentContainer::documentWidth() const
@@ -1051,27 +1061,22 @@ static litehtml::media_type fromQt(const DocumentContainer::MediaType mt)
     switch (mt)
     {
     case MT::None:
-        return litehtml::media_type_none;
+        return litehtml::media_type_unknown;
     case MT::All:
         return litehtml::media_type_all;
     case MT::Screen:
         return litehtml::media_type_screen;
     case MT::Print:
         return litehtml::media_type_print;
+    // Deprecated media types all map to first_deprecated
     case MT::Braille:
-        return litehtml::media_type_braille;
     case MT::Embossed:
-        return litehtml::media_type_embossed;
     case MT::Handheld:
-        return litehtml::media_type_handheld;
     case MT::Projection:
-        return litehtml::media_type_projection;
     case MT::Speech:
-        return litehtml::media_type_speech;
     case MT::TTY:
-        return litehtml::media_type_tty;
     case MT::TV:
-        return litehtml::media_type_tv;
+        return litehtml::media_type_first_deprecated;
     }
     Q_UNREACHABLE();
 }
