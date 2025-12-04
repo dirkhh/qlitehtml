@@ -1037,8 +1037,9 @@ void DocumentContainerPrivate::del_clip()
 
 void DocumentContainerPrivate::get_viewport(litehtml::position &viewport) const
 {
-    viewport = {static_cast<litehtml::pixel_t>(m_clientRect.x()),
-                static_cast<litehtml::pixel_t>(m_clientRect.y()),
+    // Viewport includes scroll position - this is crucial for position:fixed elements
+    viewport = {static_cast<litehtml::pixel_t>(m_scrollPosition.x()),
+                static_cast<litehtml::pixel_t>(m_scrollPosition.y()),
                 static_cast<litehtml::pixel_t>(m_clientRect.width()),
                 static_cast<litehtml::pixel_t>(m_clientRect.height())};
 }
@@ -1058,7 +1059,22 @@ std::shared_ptr<litehtml::element> DocumentContainerPrivate::create_element(
 void DocumentContainerPrivate::get_media_features(litehtml::media_features &media) const
 {
     media.type = mediaType;
-    qDebug(log) << "get_media_features";
+    // Report viewport dimensions for media queries like @media (min-width: 512px)
+    media.width = static_cast<litehtml::pixel_t>(m_clientRect.width());
+    media.height = static_cast<litehtml::pixel_t>(m_clientRect.height());
+    // Report device dimensions (screen size)
+    if (m_paintDevice) {
+        media.device_width = static_cast<litehtml::pixel_t>(m_paintDevice->width());
+        media.device_height = static_cast<litehtml::pixel_t>(m_paintDevice->height());
+        media.resolution = static_cast<litehtml::pixel_t>(m_paintDevice->logicalDpiX());
+    } else {
+        media.device_width = static_cast<litehtml::pixel_t>(m_clientRect.width());
+        media.device_height = static_cast<litehtml::pixel_t>(m_clientRect.height());
+        media.resolution = 96;
+    }
+    media.color = 8;  // 8 bits per color component (24-bit color)
+    media.monochrome = 0;  // Not a monochrome device
+    media.color_index = 256;  // Standard color palette size
 }
 
 void DocumentContainerPrivate::get_language(litehtml::string &language, litehtml::string &culture) const
@@ -1072,6 +1088,11 @@ void DocumentContainerPrivate::get_language(litehtml::string &language, litehtml
 void DocumentContainer::setPaintDevice(QPaintDevice *paintDevice)
 {
     d->m_paintDevice = paintDevice;
+}
+
+void DocumentContainer::setViewportSize(int width, int height)
+{
+    d->m_clientRect = {0, 0, width, height};
 }
 
 void DocumentContainer::setScrollPosition(const QPoint &pos)
@@ -1121,6 +1142,7 @@ void DocumentContainer::draw(QPainter *painter, const QRect &clip)
                                          static_cast<litehtml::pixel_t>(clip.y()),
                                          static_cast<litehtml::pixel_t>(clip.width()),
                                          static_cast<litehtml::pixel_t>(clip.height())};
+    // litehtml handles fixed positioning internally using the viewport from get_viewport()
     d->m_document->draw(reinterpret_cast<litehtml::uint_ptr>(painter),
                        static_cast<litehtml::pixel_t>(pos.x()),
                        static_cast<litehtml::pixel_t>(pos.y()),

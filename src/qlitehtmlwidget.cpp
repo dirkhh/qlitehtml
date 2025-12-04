@@ -455,10 +455,16 @@ void QLiteHtmlWidget::setHtml(const QString &content)
 {
     d->html = content;
     d->documentContainer.setPaintDevice(viewport());
+    // Set viewport dimensions BEFORE creating document so media queries are evaluated correctly
+    const int fullWidth = width() / d->zoomFactor;
+    const QSize vViewportSize = toVirtual(viewport()->size());
+    const int scrollbarWidth = style()->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, this);
+    const int w = fullWidth - scrollbarWidth - 2;
+    d->documentContainer.setViewportSize(w, vViewportSize.height());  // Set m_clientRect before document creation
     d->documentContainer.setDocument(content.toUtf8(), &d->context);
     verticalScrollBar()->setValue(0);
     horizontalScrollBar()->setValue(0);
-    render();
+    render();  // Render the newly created document
     QMetaObject::invokeMethod(this, [this] { updateHightlightedLink(); },
              Qt::QueuedConnection);
 }

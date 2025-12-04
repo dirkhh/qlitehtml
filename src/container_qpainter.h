@@ -44,6 +44,7 @@ public:
 
 public: // outside API
     void setPaintDevice(QPaintDevice *paintDevice);
+    void setViewportSize(int width, int height);  // Set viewport dimensions for media query evaluation
     void setDocument(const QByteArray &data, DocumentContainerContext *context);
     bool hasDocument() const;
     void setBaseUrl(const QString &url);
