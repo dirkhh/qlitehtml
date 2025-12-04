@@ -1280,8 +1280,14 @@ void DocumentContainer::findText(const QString &text,
             return;
         }
         startIndex = findInIndex->second + searchStart.index;
-        if (backward)
+        if (backward) {
+            // when searching backward, start just before the selection
             --startIndex;
+        } else if (!incremental) {
+            // when searching forward, start just after the selection so we
+            // don't immediately re-match the same occurrence
+            ++startIndex;
+        }
     }
 
     const auto fillXPos = [](const Selection::Element &e) {
