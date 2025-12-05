@@ -15,11 +15,9 @@ set(QLITEHTML_VERSION ${PROJECT_VERSION})
 set(QLITEHTML_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(QLITEHTML_VERSION_COMPAT ${QLITEHTML_VERSION} CACHE STRING "qlitehtml compat version number.")
 
-option(QLITEHTML_USE_SYSTEM_LITEHTML "Uses litehtml from the system if available" OFF)
-if(QLITEHTML_USE_SYSTEM_LITEHTML)
-  find_package(litehtml QUIET)
-endif()
-if(NOT TARGET litehtml AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml/CMakeLists.txt)
+# Always use the bundled litehtml from 3rdparty/litehtml submodule
+# Never use system-installed litehtml to ensure API compatibility
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml/CMakeLists.txt)
     set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # make it possible to override LITEHTML_BUILD_TESTING
     set(ORIG_FPIC ${CMAKE_POSITION_INDEPENDENT_CODE})
     set(ORIG_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -44,10 +42,6 @@ if(NOT TARGET litehtml AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml/
         QT_COMPILE_OPTIONS_DISABLE_WARNINGS ON
     )
 
-    # suppress compiler warnings from litehtml headers by making them "system"
-    # include directories
-    get_target_property(litehtml_includedirs litehtml INTERFACE_INCLUDE_DIRECTORIES)
-    target_include_directories(litehtml SYSTEM INTERFACE ${litehtml_includedirs})
 
     set(CMAKE_POSITION_INDEPENDENT_CODE "${ORIG_FPIC}")
     set(BUILD_SHARED_LIBS ${ORIG_BUILD_SHARED_LIBS})
@@ -59,9 +53,10 @@ if(NOT TARGET litehtml AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml/
         target_compile_options(litehtml PRIVATE -O2)
       endif()
     endif()
+else()
+  message(FATAL_ERROR "litehtml submodule not found at ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml. "
+                      "Please run: git submodule update --init --recursive")
 endif()
-
-# TODO error if litehtml was not found?
 
 if(TARGET litehtml)
   set(PUBLIC_HEADERS
@@ -79,6 +74,9 @@ if(TARGET litehtml)
   add_library(qlitehtml ${QLITEHTML_LIBRARY_TYPE} ${PUBLIC_HEADERS} container_qpainter.cpp qlitehtmlwidget.cpp)
 
   target_include_directories(qlitehtml PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+  # Ensure bundled litehtml headers are found BEFORE any system-installed litehtml
+  # Add with BEFORE to ensure high priority in search path (non-SYSTEM)
+  target_include_directories(qlitehtml BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml/include)
   target_link_libraries(qlitehtml PUBLIC Qt${QT_VERSION_MAJOR}::Widgets PRIVATE litehtml)
   target_compile_definitions(qlitehtml PRIVATE
     QT_NO_JAVA_STYLE_ITERATORS
