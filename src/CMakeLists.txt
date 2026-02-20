@@ -147,6 +147,10 @@ if(TARGET litehtml)
           FILES ${PUBLIC_HEADERS}
           DESTINATION ${QLITEHTML_HEADER_PATH}
           ${_DEVEL_COMPONENT})
+        install(
+          FILES 3rdparty/litehtml/include/litehtml/master_css.h
+          DESTINATION ${QLITEHTML_HEADER_PATH}/litehtml
+          ${_DEVEL_COMPONENT})
         target_include_directories(qlitehtml PUBLIC $<INSTALL_INTERFACE:${QLITEHTML_HEADER_PATH}>)
       endif()
     endif()
