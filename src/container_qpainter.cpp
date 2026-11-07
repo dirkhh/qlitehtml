@@ -529,8 +529,8 @@ litehtml::uint_ptr DocumentContainerPrivate::create_font(const litehtml::font_de
         // Estimate ch_width using '0' character width
         fm->ch_width = metrics.horizontalAdvance('0');
         // Reasonable defaults for sub/superscript shifts
-        fm->sub_shift = descr.size / 5.0;
-        fm->super_shift = descr.size / 3.0;
+        fm->sub_shift = descr.size / 5;
+        fm->super_shift = descr.size / 3;
     }
     return reinterpret_cast<litehtml::uint_ptr>(font);
 }
@@ -562,7 +562,7 @@ void DocumentContainerPrivate::draw_text(litehtml::uint_ptr hdc,
 litehtml::pixel_t DocumentContainerPrivate::pt_to_px(float pt) const
 {
     // magic factor of 11/12 to account for differences to webengine/webkit
-    return static_cast<litehtml::pixel_t>(m_paintDevice->physicalDpiY() * pt * 11.0 / m_paintDevice->logicalDpiY() / 12.0);
+    return static_cast<litehtml::pixel_t>(static_cast<float>(m_paintDevice->physicalDpiY() * pt * 11.0 / m_paintDevice->logicalDpiY() / 12.0));
 }
 
 litehtml::pixel_t DocumentContainerPrivate::get_default_font_size() const
@@ -775,7 +775,7 @@ void DocumentContainerPrivate::draw_image(litehtml::uint_ptr hdc,
     } else if (layer.repeat == litehtml::background_repeat_repeat_x) {
         if (originBox.width() > 0) {
             int x = layer.border_box.left();
-            while (x <= layer.border_box.right()) {
+            while (x <= static_cast<int>(layer.border_box.right())) {
                 painter->drawPixmap(QRect(x, originBox.top(), originBox.width(), originBox.height()),
                                   pixmap);
                 x += originBox.width();
@@ -783,8 +783,8 @@ void DocumentContainerPrivate::draw_image(litehtml::uint_ptr hdc,
         }
     } else if (layer.repeat == litehtml::background_repeat_repeat) {
         if (originBox.width() > 0 && originBox.height() > 0) {
-            for (int y = layer.border_box.top(); y <= layer.border_box.bottom(); y += originBox.height()) {
-                for (int x = layer.border_box.left(); x <= layer.border_box.right(); x += originBox.width()) {
+            for (int y = layer.border_box.top(); y <= static_cast<int>(layer.border_box.bottom()); y += originBox.height()) {
+                for (int x = layer.border_box.left(); x <= static_cast<int>(layer.border_box.right()); x += originBox.width()) {
                     painter->drawPixmap(QRect(x, y, originBox.width(), originBox.height()), pixmap);
                 }
             }
@@ -792,7 +792,7 @@ void DocumentContainerPrivate::draw_image(litehtml::uint_ptr hdc,
     } else if (layer.repeat == litehtml::background_repeat_repeat_y) {
         if (originBox.height() > 0) {
             int y = layer.border_box.top();
-            while (y <= layer.border_box.bottom()) {
+            while (y <= static_cast<int>(layer.border_box.bottom())) {
                 painter->drawPixmap(QRect(originBox.left(), y, originBox.width(), originBox.height()),
                                   pixmap);
                 y += originBox.height();
@@ -1001,7 +1001,7 @@ void DocumentContainerPrivate::set_cursor(const char *cursor)
     m_cursorCallback(toQCursor(QString::fromUtf8(cursor)));
 }
 
-void DocumentContainerPrivate::transform_text(litehtml::string &text, litehtml::text_transform tt)
+void DocumentContainerPrivate::transform_text(std::string &text, litehtml::text_transform tt)
 {
     // TODO
     qDebug(log) << "transform_text";
@@ -1009,9 +1009,9 @@ void DocumentContainerPrivate::transform_text(litehtml::string &text, litehtml::
     Q_UNUSED(tt)
 }
 
-void DocumentContainerPrivate::import_css(litehtml::string &text,
-                                          const litehtml::string &url,
-                                          litehtml::string &baseurl)
+void DocumentContainerPrivate::import_css(std::string &text,
+                                           const std::string &url,
+                                           std::string &baseurl)
 {
     const QUrl actualUrl = resolveUrl(QString::fromStdString(url), QString::fromStdString(baseurl));
     const QString urlString = actualUrl.toString(QUrl::None);
@@ -1077,7 +1077,7 @@ void DocumentContainerPrivate::get_media_features(litehtml::media_features &medi
     media.color_index = 256;  // Standard color palette size
 }
 
-void DocumentContainerPrivate::get_language(litehtml::string &language, litehtml::string &culture) const
+void DocumentContainerPrivate::get_language(std::string &language, std::string &culture) const
 {
     // TODO
     qDebug(log) << "get_language";
@@ -1176,7 +1176,7 @@ int DocumentContainer::anchorY(const QString &anchorName) const
             return -1;
     }
     while (element) {
-        if (element->get_placement().y > 0)
+        if (element->get_placement().y > litehtml::pixel_t(0))
             return element->get_placement().y;
         element = element->parent();
     }
@@ -1231,12 +1231,11 @@ QVector<QRect> DocumentContainer::mousePressEvent(const QPoint &documentPos,
                                                           viewportPos,
                                                           d->m_selection.mode);
     // post to litehtml
-    litehtml::position::vector redrawBoxes;
-    if (d->m_document->on_lbutton_down(
-            documentPos.x(), documentPos.y(), viewportPos.x(), viewportPos.y(), redrawBoxes)) {
-        for (const litehtml::position &box : redrawBoxes)
-            redrawRects.append(toQRect(box));
-    }
+    const auto redrawBox = [&redrawRects](const litehtml::position &box) {
+        redrawRects.append(toQRect(box));
+    };
+    d->m_document->on_lbutton_down(
+        documentPos.x(), documentPos.y(), viewportPos.x(), viewportPos.y(), redrawBox);
     return redrawRects;
 }
 
@@ -1264,12 +1263,11 @@ QVector<QRect> DocumentContainer::mouseMoveEvent(const QPoint &documentPos,
         }
         d->m_selection.isSelecting = true;
     }
-    litehtml::position::vector redrawBoxes;
-    if (d->m_document->on_mouse_over(
-            documentPos.x(), documentPos.y(), viewportPos.x(), viewportPos.y(), redrawBoxes)) {
-        for (const litehtml::position &box : redrawBoxes)
-            redrawRects.append(toQRect(box));
-    }
+    const auto redrawBox = [&redrawRects](const litehtml::position &box) {
+        redrawRects.append(toQRect(box));
+    };
+    d->m_document->on_mouse_over(
+        documentPos.x(), documentPos.y(), viewportPos.x(), viewportPos.y(), redrawBox);
     return redrawRects;
 }
 
@@ -1287,12 +1285,11 @@ QVector<QRect> DocumentContainer::mouseReleaseEvent(const QPoint &documentPos,
         d->m_blockLinks = true;
     else
         d->clearSelection();
-    litehtml::position::vector redrawBoxes;
-    if (d->m_document->on_lbutton_up(
-            documentPos.x(), documentPos.y(), viewportPos.x(), viewportPos.y(), redrawBoxes)) {
-        for (const litehtml::position &box : redrawBoxes)
-            redrawRects.append(toQRect(box));
-    }
+    const auto redrawBox = [&redrawRects](const litehtml::position &box) {
+        redrawRects.append(toQRect(box));
+    };
+    d->m_document->on_lbutton_up(
+        documentPos.x(), documentPos.y(), viewportPos.x(), viewportPos.y(), redrawBox);
     d->m_blockLinks = false;
     return redrawRects;
 }
@@ -1329,14 +1326,11 @@ QVector<QRect> DocumentContainer::leaveEvent()
 {
     if (!d->m_document)
         return {};
-    litehtml::position::vector redrawBoxes;
-    if (d->m_document->on_mouse_leave(redrawBoxes)) {
-        QVector<QRect> redrawRects;
-        for (const litehtml::position &box : redrawBoxes)
-            redrawRects.append(toQRect(box));
-        return redrawRects;
-    }
-    return {};
+    QVector<QRect> redrawRects;
+    d->m_document->on_mouse_leave([&redrawRects](const litehtml::position &box) {
+        redrawRects.append(toQRect(box));
+    });
+    return redrawRects;
 }
 
 QUrl DocumentContainer::linkAt(const QPoint &documentPos, const QPoint &viewportPos)
@@ -1540,7 +1534,7 @@ static litehtml::element::ptr elementForY(int y, const litehtml::element::ptr &e
 {
     if (!element)
         return {};
-    if (element->get_placement().y >= y)
+    if (element->get_placement().y >= litehtml::pixel_t(y))
         return element;
     for (const litehtml::element::ptr &child : element->children()) {
         litehtml::element::ptr result = elementForY(y, child);

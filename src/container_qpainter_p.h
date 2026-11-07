@@ -102,8 +102,8 @@ public: // document_container API
     void on_anchor_click(const char *url, const litehtml::element::ptr &el) override;
     void on_mouse_event(const litehtml::element::ptr& el, litehtml::mouse_event event) override;
     void set_cursor(const char *cursor) override;
-    void transform_text(litehtml::string &text, litehtml::text_transform tt) override;
-    void import_css(litehtml::string &text, const litehtml::string &url, litehtml::string &baseurl) override;
+    void transform_text(std::string &text, litehtml::text_transform tt) override;
+    void import_css(std::string &text, const std::string &url, std::string &baseurl) override;
     void set_clip(const litehtml::position &pos,
                   const litehtml::border_radiuses &bdr_radius) override;
     void del_clip() override;
@@ -113,7 +113,7 @@ public: // document_container API
         const litehtml::string_map &attributes,
         const std::shared_ptr<litehtml::document> &doc) override;
     void get_media_features(litehtml::media_features &media) const override;
-    void get_language(litehtml::string &language, litehtml::string &culture) const override;
+    void get_language(std::string &language, std::string &culture) const override;
 
     QPixmap getPixmap(const QString &imageUrl, const QString &baseUrl);
     QString serifFont() const;
