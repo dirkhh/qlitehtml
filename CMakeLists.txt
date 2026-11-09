@@ -36,3 +36,7 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(tests/manual/browser)
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests/adapter)
+endif()
