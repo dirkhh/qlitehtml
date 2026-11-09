@@ -24,6 +24,11 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/litehtml/CMakeLists.txt)
     if (WIN32)
       set(LITEHTML_UTF8 ON CACHE BOOL "")
     endif()
+    # litehtml runs clang-tidy over its own sources with warnings as errors when
+    # clang-tidy is found. That is a litehtml development check, not something
+    # consumers should hit, so default it off. Not forced: pass
+    # -DLITEHTML_ENABLE_LINT=ON to enable it.
+    set(LITEHTML_ENABLE_LINT OFF CACHE BOOL "enable linting for litehtml")
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(BUILD_SHARED_LIBS OFF)
     set(LITEHTML_BUILD_TESTING OFF)
